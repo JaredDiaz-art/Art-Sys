@@ -1,4 +1,4 @@
-// Sistema OCR integrado para ArtSys con Tesseract.js
+// Sistema OCR integrado para ArtSys con flujo de confirmación y "IA" avanzada
 class OCRSystem {
     constructor() {
         this.stream = null;
@@ -7,6 +7,7 @@ class OCRSystem {
         this.capturedImage = null;
         this.ocrResults = [];
         this.tesseract = null;
+        this.rawOCRText = '';
         this.init();
     }
 
@@ -18,20 +19,16 @@ class OCRSystem {
 
     async loadTesseract() {
         try {
-            // Cargar Tesseract.js desde CDN
             if (typeof Tesseract === 'undefined') {
                 const script = document.createElement('script');
                 script.src = 'https://unpkg.com/tesseract.js@4/dist/tesseract.min.js';
                 document.head.appendChild(script);
-                
                 await new Promise((resolve, reject) => {
                     script.onload = resolve;
                     script.onerror = reject;
                 });
             }
-            
             this.tesseract = Tesseract;
-            console.log('Tesseract.js cargado correctamente');
         } catch (error) {
             console.error('Error al cargar Tesseract.js:', error);
         }
@@ -45,7 +42,6 @@ class OCRSystem {
                     <div class="modal-header-with-img">
                         <h3>🔍 Escáner OCR - <span id="ocrActionTitle">Entradas</span></h3>
                     </div>
-                    
                     <!-- Paso 1: Cámara -->
                     <div id="ocrCameraStep" class="ocr-step active">
                         <div class="camera-container">
@@ -57,13 +53,20 @@ class OCRSystem {
                             </div>
                         </div>
                     </div>
-
-                    <!-- Paso 2: Resultados OCR -->
+                    <!-- Paso 2: Confirmar Foto -->
+                    <div id="ocrConfirmStep" class="ocr-step" style="display: none; text-align:center;">
+                        <h4>¿La foto es clara y legible?</h4>
+                        <img id="ocrCapturedImage" style="max-width: 400px; border-radius: 10px; margin: 20px 0;" />
+                        <div class="ocr-actions">
+                            <button id="confirmPhotoBtn" class="artisanal-button">✅ Usar esta foto</button>
+                            <button id="retakePhotoBtn2" class="action-button">📷 Tomar otra foto</button>
+                        </div>
+                    </div>
+                    <!-- Paso 3: Resultados OCR/IA -->
                     <div id="ocrResultsStep" class="ocr-step" style="display: none;">
                         <div class="ocr-status">
                             <div id="ocrStatus" class="status info">Procesando imagen...</div>
                         </div>
-                        
                         <div id="ocrResultsContainer" style="display: none;">
                             <h4>Productos Detectados:</h4>
                             <div class="table-container">
@@ -73,7 +76,8 @@ class OCRSystem {
                                             <th>Cantidad</th>
                                             <th>Nombre</th>
                                             <th>Capacidad</th>
-                                            <th id="priceColumnHeader">Precio</th>
+                                            <th>Tipo Capacidad</th>
+                                            <th>Precio</th>
                                             <th>Acciones</th>
                                         </tr>
                                     </thead>
@@ -82,32 +86,30 @@ class OCRSystem {
                             </div>
                             <div class="ocr-actions">
                                 <button id="confirmOCRBtn" class="artisanal-button">✅ Confirmar y Enviar</button>
-                                <button id="retakePhotoBtn" class="action-button">📷 Tomar Nueva Foto</button>
+                                <button id="retakePhotoBtn3" class="action-button">📷 Tomar Nueva Foto</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         `;
-
         document.body.insertAdjacentHTML('beforeend', modalHTML);
     }
 
     bindEvents() {
-        // Botones OCR existentes
         document.getElementById('ocrButtonEntradas').addEventListener('click', () => this.openOCR('entrada'));
         document.getElementById('ocrButtonSalidas').addEventListener('click', () => this.openOCR('salida'));
         document.getElementById('ocrButtonBajas').addEventListener('click', () => this.openOCR('baja'));
-
-        // Botones del modal OCR
         document.getElementById('closeOCRModal').addEventListener('click', () => this.closeOCR());
         document.getElementById('startCameraBtn').addEventListener('click', () => this.startCamera());
         document.getElementById('captureImageBtn').addEventListener('click', () => this.captureImage());
         document.getElementById('stopCameraBtn').addEventListener('click', () => this.stopCamera());
+        // Confirmación de foto
+        document.getElementById('confirmPhotoBtn').addEventListener('click', () => this.processOCR());
+        document.getElementById('retakePhotoBtn2').addEventListener('click', () => this.retakePhoto());
+        // Resultados
         document.getElementById('confirmOCRBtn').addEventListener('click', () => this.confirmAndSend());
-        document.getElementById('retakePhotoBtn').addEventListener('click', () => this.retakePhoto());
-
-        // Cerrar modal al hacer clic fuera
+        document.getElementById('retakePhotoBtn3').addEventListener('click', () => this.retakePhoto());
         document.getElementById('ocrModal').addEventListener('click', (e) => {
             if (e.target.id === 'ocrModal') {
                 this.closeOCR();
@@ -118,21 +120,6 @@ class OCRSystem {
     openOCR(action) {
         this.currentAction = action;
         document.getElementById('ocrActionTitle').textContent = this.getActionTitle(action);
-        
-        // Actualizar encabezado de precio según la acción
-        const priceHeader = document.getElementById('priceColumnHeader');
-        switch (action) {
-            case 'entrada':
-                priceHeader.textContent = 'Precio de Compra';
-                break;
-            case 'salida':
-                priceHeader.textContent = 'Precio de Venta';
-                break;
-            case 'baja':
-                priceHeader.textContent = 'Precio (Negativo)';
-                break;
-        }
-        
         document.getElementById('ocrModal').style.display = 'block';
         this.showStep('camera');
     }
@@ -154,37 +141,30 @@ class OCRSystem {
 
     showStep(step) {
         document.querySelectorAll('.ocr-step').forEach(s => s.style.display = 'none');
-        document.getElementById(`ocr${step.charAt(0).toUpperCase() + step.slice(1)}Step`).style.display = 'block';
+        if (step === 'camera') document.getElementById('ocrCameraStep').style.display = 'block';
+        if (step === 'confirm') document.getElementById('ocrConfirmStep').style.display = 'block';
+        if (step === 'results') document.getElementById('ocrResultsStep').style.display = 'block';
     }
 
     async startCamera() {
         try {
             const status = document.getElementById('ocrStatus');
-            status.textContent = 'Accediendo a la cámara...';
-            status.className = 'status info';
-
+            if (status) { status.textContent = 'Accediendo a la cámara...'; status.className = 'status info'; }
             this.stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
+                video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
             });
-
             this.video = document.getElementById('ocrVideo');
             this.video.srcObject = this.stream;
-
             document.getElementById('startCameraBtn').style.display = 'none';
             document.getElementById('captureImageBtn').style.display = 'inline-block';
             document.getElementById('stopCameraBtn').style.display = 'inline-block';
-
-            status.textContent = '✅ Cámara activada - Posicione la lista de productos';
-            status.className = 'status success';
-
+            if (status) { status.textContent = '✅ Cámara activada - Posicione la lista de productos'; status.className = 'status success'; }
         } catch (error) {
             console.error('Error al acceder a la cámara:', error);
-            document.getElementById('ocrStatus').textContent = '❌ Error al acceder a la cámara';
-            document.getElementById('ocrStatus').className = 'status error';
+            if (document.getElementById('ocrStatus')) {
+                document.getElementById('ocrStatus').textContent = '❌ Error al acceder a la cámara';
+                document.getElementById('ocrStatus').className = 'status error';
+            }
         }
     }
 
@@ -203,166 +183,16 @@ class OCRSystem {
             alert('La cámara no está lista');
             return;
         }
-
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        
         canvas.width = this.video.videoWidth;
         canvas.height = this.video.videoHeight;
         context.drawImage(this.video, 0, 0);
-        
         this.capturedImage = canvas.toDataURL('image/jpeg');
-        
         this.stopCamera();
-        this.processOCR();
-    }
-
-    async processOCR() {
-        this.showStep('results');
-        const status = document.getElementById('ocrStatus');
-        status.textContent = '🔍 Procesando imagen con OCR...';
-        status.className = 'status info';
-
-        try {
-            if (!this.tesseract) {
-                throw new Error('Tesseract.js no está cargado');
-            }
-
-            // Procesar imagen con Tesseract.js
-            const result = await this.tesseract.recognize(
-                this.capturedImage,
-                'spa+eng',
-                {
-                    logger: m => {
-                        if (m.status === 'recognizing text') {
-                            status.textContent = `🔍 Procesando... ${Math.round(m.progress * 100)}%`;
-                        }
-                    }
-                }
-            );
-
-            this.rawOCRText = result.data.text;
-            console.log('Texto OCR detectado:', this.rawOCRText);
-            
-            // Procesar con IA para interpretar los resultados
-            this.ocrResults = this.processWithAI(this.rawOCRText);
-            
-            this.displayResults();
-            
-        } catch (error) {
-            console.error('Error en OCR:', error);
-            status.textContent = '❌ Error al procesar la imagen';
-            status.className = 'status error';
-            
-            // Fallback: usar datos simulados
-            await this.fallbackOCR();
-        }
-    }
-
-    async fallbackOCR() {
-        const status = document.getElementById('ocrStatus');
-        status.textContent = '⚠️ Usando modo de demostración...';
-        status.className = 'status info';
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Datos de ejemplo
-        this.rawOCRText = `
-            2 Jabón de manos 500ml $3.50
-            1 Detergente líquido 1L $5.20
-            3 Papel higiénico 4 rollos $2.80
-            1 Limpiador multiusos 750ml $4.10
-        `;
-        
-        this.ocrResults = this.processWithAI(this.rawOCRText);
-        this.displayResults();
-    }
-
-    processWithAI(rawText) {
-        // Procesar texto con IA para extraer productos
-        const lines = rawText.trim().split('\n').filter(line => line.trim());
-        const products = [];
-
-        lines.forEach(line => {
-            // Patrón: cantidad nombre capacidad precio
-            const patterns = [
-                /(\d+)\s+(.+?)\s+(\d+[mlL])\s+\$?(\d+\.?\d*)/i,
-                /(\d+)\s+(.+?)\s+(\d+[mlL])\s+(\d+\.?\d*)/i,
-                /(\d+)\s+(.+?)\s+(\d+)\s+\$?(\d+\.?\d*)/i,
-                /(\d+)\s+(.+?)\s+\$?(\d+\.?\d*)/i
-            ];
-
-            let matched = false;
-            for (const pattern of patterns) {
-                const match = line.match(pattern);
-                if (match) {
-                    products.push({
-                        cantidad: parseInt(match[1]),
-                        nombre: match[2].trim(),
-                        capacidad: match[3] || 'N/A',
-                        precio: parseFloat(match[match.length - 1]),
-                        original: line.trim()
-                    });
-                    matched = true;
-                    break;
-                }
-            }
-
-            // Si no coincide con ningún patrón, intentar extraer información básica
-            if (!matched) {
-                const words = line.trim().split(/\s+/);
-                if (words.length >= 2) {
-                    const cantidad = parseInt(words[0]) || 1;
-                    const nombre = words.slice(1, -1).join(' ');
-                    const precio = parseFloat(words[words.length - 1]) || 0;
-                    
-                    products.push({
-                        cantidad: cantidad,
-                        nombre: nombre,
-                        capacidad: 'N/A',
-                        precio: precio,
-                        original: line.trim()
-                    });
-                }
-            }
-        });
-
-        return products;
-    }
-
-    displayResults() {
-        const tbody = document.querySelector('#ocrResultsTable tbody');
-        tbody.innerHTML = '';
-
-        this.ocrResults.forEach((product, index) => {
-            const row = document.createElement('tr');
-            
-            // Ajustar precio según la acción
-            let precio = product.precio;
-            if (this.currentAction === 'baja' && precio > 0) {
-                precio = -precio;
-            }
-            
-            row.innerHTML = `
-                <td><input type="number" value="${product.cantidad}" min="1" class="ocr-edit-input"></td>
-                <td><input type="text" value="${product.nombre}" class="ocr-edit-input"></td>
-                <td><input type="text" value="${product.capacidad}" class="ocr-edit-input"></td>
-                <td><input type="number" value="${precio}" step="0.01" class="ocr-edit-input"></td>
-                <td>
-                    <button onclick="ocrSystem.deleteProduct(${index})" class="action-button delete-button">🗑️</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        document.getElementById('ocrResultsContainer').style.display = 'block';
-        document.getElementById('ocrStatus').textContent = `✅ Se detectaron ${this.ocrResults.length} productos`;
-        document.getElementById('ocrStatus').className = 'status success';
-    }
-
-    deleteProduct(index) {
-        this.ocrResults.splice(index, 1);
-        this.displayResults();
+        // Mostrar confirmación de la foto
+        document.getElementById('ocrCapturedImage').src = this.capturedImage;
+        this.showStep('confirm');
     }
 
     retakePhoto() {
@@ -379,22 +209,123 @@ class OCRSystem {
         document.getElementById('ocrStatus').className = 'status info';
     }
 
+    async processOCR() {
+        this.showStep('results');
+        const status = document.getElementById('ocrStatus');
+        status.textContent = '🔍 Procesando imagen...';
+        status.className = 'status info';
+        try {
+            if (!this.tesseract) throw new Error('Tesseract.js no está cargado');
+            // Usar OCR solo para extraer texto
+            const result = await this.tesseract.recognize(
+                this.capturedImage,
+                'spa+eng',
+                {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            status.textContent = `🔍 Procesando... ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                }
+            );
+            this.rawOCRText = result.data.text;
+            // Ahora usar la "IA" (regex avanzada) para estructurar la información
+            this.ocrResults = this.processWithAI(this.rawOCRText);
+            this.displayResults();
+        } catch (error) {
+            console.error('Error en OCR:', error);
+            status.textContent = '❌ Error al procesar la imagen';
+            status.className = 'status error';
+            // Fallback demo
+            await this.fallbackOCR();
+        }
+    }
+
+    async fallbackOCR() {
+        const status = document.getElementById('ocrStatus');
+        status.textContent = '⚠️ Usando modo de demostración...';
+        status.className = 'status info';
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        this.rawOCRText = `2 Jabón de manos 500 ml $35\n1 Detergente líquido 1.5 L $52\n3 Papel higiénico 4 rollos 12 m $28\n1 Limpiador multiusos 750 ml $41`;
+        this.ocrResults = this.processWithAI(this.rawOCRText);
+        this.displayResults();
+    }
+
+    // IA: Buscar estructura cantidad nombre capacidad tipoCapacidad $precio
+    processWithAI(rawText) {
+        const lines = rawText.trim().split('\n').filter(line => line.trim());
+        const products = [];
+        // Regex: cantidad nombre capacidad tipoCapacidad $precio
+        // Ejemplo: 2 Jabón de manos 500 ml $35
+        const regex = /^(\d+)\s+([\wÁÉÍÓÚáéíóúüÜñÑ\s]+?)\s+(\d+[\/.\d]*)\s*([a-zA-ZáéíóúüñÑ]+)\s*\$\s*(\d+)/;
+        lines.forEach(line => {
+            const match = line.match(regex);
+            if (match) {
+                products.push({
+                    cantidad: parseInt(match[1]),
+                    nombre: match[2].trim(),
+                    capacidad: match[3],
+                    tipoCapacidad: match[4],
+                    precio: parseInt(match[5]),
+                    original: line.trim()
+                });
+            } else {
+                // Si no coincide, intentar extraer lo más posible
+                const fallback = line.match(/(\d+)\s+([\wÁÉÍÓÚáéíóúüÜñÑ\s]+?)\s+(\d+[\/.\d]*)?\s*([a-zA-ZáéíóúüñÑ]+)?\s*\$?\s*(\d+)?/);
+                if (fallback) {
+                    products.push({
+                        cantidad: parseInt(fallback[1]) || '',
+                        nombre: fallback[2] ? fallback[2].trim() : '',
+                        capacidad: fallback[3] || '',
+                        tipoCapacidad: fallback[4] || '',
+                        precio: fallback[5] ? parseInt(fallback[5]) : '',
+                        original: line.trim()
+                    });
+                }
+            }
+        });
+        return products;
+    }
+
+    displayResults() {
+        const tbody = document.querySelector('#ocrResultsTable tbody');
+        tbody.innerHTML = '';
+        this.ocrResults.forEach((product, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><input type="number" value="${product.cantidad || ''}" min="1" class="ocr-edit-input"></td>
+                <td><input type="text" value="${product.nombre || ''}" class="ocr-edit-input"></td>
+                <td><input type="text" value="${product.capacidad || ''}" class="ocr-edit-input"></td>
+                <td><input type="text" value="${product.tipoCapacidad || ''}" class="ocr-edit-input"></td>
+                <td><input type="number" value="${product.precio || ''}" min="0" class="ocr-edit-input"></td>
+                <td><button onclick="ocrSystem.deleteProduct(${index})" class="action-button delete-button">🗑️</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+        document.getElementById('ocrResultsContainer').style.display = 'block';
+        document.getElementById('ocrStatus').textContent = `✅ Se detectaron ${this.ocrResults.length} productos`;
+        document.getElementById('ocrStatus').className = 'status success';
+    }
+
+    deleteProduct(index) {
+        this.ocrResults.splice(index, 1);
+        this.displayResults();
+    }
+
     confirmAndSend() {
         // Obtener datos editados de la tabla
         const rows = document.querySelectorAll('#ocrResultsTable tbody tr');
         const finalProducts = [];
-
         rows.forEach(row => {
             const inputs = row.querySelectorAll('.ocr-edit-input');
             finalProducts.push({
                 cantidad: parseInt(inputs[0].value),
                 nombre: inputs[1].value,
                 capacidad: inputs[2].value,
-                precio: parseFloat(inputs[3].value)
+                tipoCapacidad: inputs[3].value,
+                precio: parseInt(inputs[4].value)
             });
         });
-
-        // Ejecutar acción según el tipo
         this.executeAction(finalProducts);
     }
 
@@ -413,39 +344,20 @@ class OCRSystem {
     }
 
     handleEntrada(products) {
-        // Simular registro de entradas
-        console.log('Registrando entradas:', products);
-        
-        // Aquí se integraría con la base de datos existente
         this.saveToDatabase('entrada', products);
-        
         alert(`✅ Se registraron ${products.length} productos como entradas`);
         this.closeOCR();
     }
 
     handleSalida(products) {
-        // Simular registro de salidas
-        console.log('Registrando salidas:', products);
-        
-        // Aquí se integraría con la base de datos existente
         this.saveToDatabase('salida', products);
-        
         alert(`✅ Se registraron ${products.length} productos como salidas`);
         this.closeOCR();
     }
 
     handleBaja(products) {
-        // Simular registro de bajas (precios negativos)
-        const bajasProducts = products.map(p => ({
-            ...p,
-            precio: p.precio ? -Math.abs(p.precio) : 0
-        }));
-        
-        console.log('Registrando bajas:', bajasProducts);
-        
-        // Aquí se integraría con la base de datos existente
+        const bajasProducts = products.map(p => ({ ...p, precio: p.precio ? -Math.abs(p.precio) : 0 }));
         this.saveToDatabase('baja', bajasProducts);
-        
         alert(`✅ Se registraron ${bajasProducts.length} productos como bajas`);
         this.closeOCR();
     }
@@ -453,18 +365,11 @@ class OCRSystem {
     async saveToDatabase(action, products) {
         try {
             if (localDB) {
-                // Guardar productos en la base de datos local
                 await localDB.saveProductos(action, products);
-                
-                // Guardar transacción
                 const bodega = this.getCurrentBodega();
                 await localDB.saveTransaccion(action, products, bodega);
-                
-                console.log('Datos guardados en base de datos local');
             } else {
-                // Fallback a localStorage si la base de datos no está disponible
                 const transactions = JSON.parse(localStorage.getItem('ocrTransactions') || '[]');
-                
                 products.forEach(product => {
                     transactions.push({
                         id: Date.now() + Math.random(),
@@ -472,13 +377,12 @@ class OCRSystem {
                         cantidad: product.cantidad,
                         producto: product.nombre,
                         capacidad: product.capacidad,
+                        tipoCapacidad: product.tipoCapacidad,
                         precio: product.precio,
                         fecha: new Date().toISOString()
                     });
                 });
-                
                 localStorage.setItem('ocrTransactions', JSON.stringify(transactions));
-                console.log('Datos guardados en localStorage (fallback)');
             }
         } catch (error) {
             console.error('Error al guardar en base de datos:', error);
@@ -486,13 +390,11 @@ class OCRSystem {
     }
 
     getCurrentBodega() {
-        // Obtener la bodega seleccionada del formulario actual
         const bodegaSelect = document.querySelector('select[id*="warehouse"]');
         return bodegaSelect ? bodegaSelect.value : 'General';
     }
 }
 
-// Inicializar sistema OCR cuando se cargue la página
 let ocrSystem;
 document.addEventListener('DOMContentLoaded', () => {
     ocrSystem = new OCRSystem();
