@@ -1,0 +1,351 @@
+/* principal.css - Modularizado por componentes y documentado */
+
+/* =====================
+   Variables globales
+   ===================== */
+:root {
+    --artisanal-primary: #8B4513; /* SaddleBrown */
+    --artisanal-secondary: #D2B48C; /* Tan */
+    --artisanal-accent: #CD853F; /* Peru */
+    --artisanal-light: #FAEBD7; /* AntiqueWhite */
+    --artisanal-dark: #5D4037; /* Brown */
+}
+
+/* =====================
+   Layout general
+   ===================== */
+body {
+    font-family: 'Georgia', serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--artisanal-light);
+    color: var(--artisanal-dark);
+}
+
+/* =====================
+   Encabezado principal
+   ===================== */
+.artisanal-header {
+    background: linear-gradient(to right, var(--artisanal-primary), var(--artisanal-accent));
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.artisanal-logo {
+    font-family: 'Georgia', serif;
+    font-size: 2rem;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.artisanal-tagline {
+    font-style: italic;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* =====================
+   Barra lateral y navegación
+   ===================== */
+.main-container {
+    display: flex;
+    min-height: calc(100vh - 60px);
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--artisanal-secondary);
+    padding: 1rem;
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nav-button {
+    background: none;
+    border: none;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--artisanal-dark);
+    transition: all 0.3s;
+}
+
+.nav-button:hover {
+    background-color: var(--artisanal-accent);
+    color: white;
+}
+
+.nav-button.active {
+    background-color: var(--artisanal-accent);
+    border-left: 4px solid var(--artisanal-primary);
+}
+
+.nav-button.active span {
+    color: white;
+    font-weight: bold;
+}
+
+/* =====================
+   Área de contenido principal
+   ===================== */
+.content-area {
+    flex: 1;
+    padding: 1.5rem;
+}
+
+.content-section {
+    display: none;
+    background-color: var(--artisanal-light);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.content-section.active {
+    display: block;
+}
+
+/* =====================
+   Botones y acciones
+   ===================== */
+.artisanal-button {
+    background-color: var(--artisanal-primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.artisanal-button:hover {
+    background-color: var(--artisanal-dark);
+}
+
+.action-button {
+    background-color: var(--artisanal-accent);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    transition: background 0.3s;
+}
+
+.action-button:hover {
+    background-color: var(--artisanal-dark);
+}
+
+.delete-button {
+    background-color: #c0392b;
+}
+.delete-button:hover {
+    background-color: #922b21;
+}
+.edit-button {
+    background-color: #2980b9;
+}
+.edit-button:hover {
+    background-color: #1c5a86;
+}
+
+/* =====================
+   Formularios y filtros
+   ===================== */
+.input-group {
+    margin-bottom: 1rem;
+}
+.input-group-inline {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--artisanal-dark);
+}
+input, select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--artisanal-accent);
+    border-radius: 4px;
+    background-color: white;
+}
+.product-filters {
+    margin-bottom: 1rem;
+}
+.finance-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* =====================
+   Tablas y contenedores
+   ===================== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--artisanal-accent);
+}
+th {
+    background-color: var(--artisanal-primary);
+    color: white;
+}
+tr:hover {
+    background-color: rgba(205, 133, 63, 0.1);
+}
+.table-container {
+    overflow-x: auto;
+}
+.cart-container {
+    margin-top: 1rem;
+}
+
+/* =====================
+   Modales y overlays
+   ===================== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+.modal-content {
+    background-color: var(--artisanal-light);
+    margin: 15% auto;
+    padding: 1.5rem;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    position: relative;
+}
+.close-button {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+.modal-header-with-img {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* =====================
+   Mensajes y feedback
+   ===================== */
+.message {
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    display: inline-block;
+}
+.message.success {
+    background-color: #27ae60;
+    color: white;
+}
+.message.error {
+    background-color: #c0392b;
+    color: white;
+}
+
+/* =====================
+   Resultados de búsqueda
+   ===================== */
+.search-results-dropdown {
+    position: absolute;
+    background: white;
+    border: 1px solid var(--artisanal-accent);
+    border-radius: 4px;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    display: none;
+}
+.search-result-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background-color: var(--artisanal-accent);
+    color: white;
+}
+
+/* =====================
+   Botones OCR
+   ===================== */
+.ocr-button {
+    background-color: #16a085;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: background 0.3s;
+}
+.ocr-button:hover {
+    background-color: #117864;
+}
+
+/* =====================
+   Responsive
+   ===================== */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        padding: 0.5rem;
+    }
+    .sidebar nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .nav-button {
+        flex: 1 1 40%;
+        padding: 0.5rem;
+    }
+    .content-area {
+        padding: 0.5rem;
+    }
+    .finance-filters {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .input-group-inline {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+} 

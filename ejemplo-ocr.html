@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ejemplo OCR - ArtSys</title>
+    <link rel="stylesheet" href="principal.css">
+    <link rel="stylesheet" href="ocr-styles.css">
+    <style>
+        .example-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .example-text {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+            line-height: 1.6;
+        }
+        .demo-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .demo-button {
+            background: var(--artisanal-primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .demo-button:hover {
+            background: var(--artisanal-dark);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="example-container">
+        <h1>🔍 Sistema OCR - ArtSys</h1>
+        <p>Este es un ejemplo del sistema OCR integrado. El sistema puede detectar automáticamente productos en listas escaneadas.</p>
+
+        <h2>📋 Formatos de Texto Soportados</h2>
+        <p>El sistema puede procesar listas de productos en estos formatos:</p>
+
+        <div class="example-text">
+            <strong>Formato 1 (Recomendado):</strong><br>
+            2 Jabón de manos 500ml $3.50<br>
+            1 Detergente líquido 1L $5.20<br>
+            3 Papel higiénico 4 rollos $2.80<br>
+            1 Limpiador multiusos 750ml $4.10
+        </div>
+
+        <div class="example-text">
+            <strong>Formato 2:</strong><br>
+            5 Leche 1L 2.50<br>
+            2 Pan integral 1.80<br>
+            3 Manzanas kg 3.20
+        </div>
+
+        <div class="example-text">
+            <strong>Formato 3:</strong><br>
+            1 Aceite de oliva 250ml<br>
+            2 Harina 1kg<br>
+            4 Huevos docena
+        </div>
+
+        <h2>🎯 Tipos de Acciones</h2>
+        <p>Según la acción seleccionada, el sistema ajusta automáticamente:</p>
+
+        <div class="demo-buttons">
+            <button class="demo-button" onclick="probarOCR('entrada')">📥 Probar Entradas</button>
+            <button class="demo-button" onclick="probarOCR('salida')">📤 Probar Salidas</button>
+            <button class="demo-button" onclick="probarOCR('baja')">📉 Probar Bajas</button>
+        </div>
+
+        <h2>🔧 Características del Sistema</h2>
+        <ul>
+            <li><strong>Detección automática:</strong> Identifica cantidad, nombre, capacidad y precio</li>
+            <li><strong>Edición manual:</strong> Permite corregir cualquier error del OCR</li>
+            <li><strong>Base de datos local:</strong> Almacena datos sin necesidad de servidor</li>
+            <li><strong>Múltiples formatos:</strong> Soporta diferentes patrones de texto</li>
+            <li><strong>Interfaz integrada:</strong> Mantiene la estética del sitio principal</li>
+        </ul>
+
+        <h2>📱 Cómo Usar</h2>
+        <ol>
+            <li>Haz clic en cualquier botón de prueba arriba</li>
+            <li>Se abrirá el modal OCR</li>
+            <li>Haz clic en "Iniciar Cámara"</li>
+            <li>Posiciona una lista de productos frente a la cámara</li>
+            <li>Haz clic en "Capturar" cuando esté bien enfocado</li>
+            <li>Revisa y edita los resultados si es necesario</li>
+            <li>Haz clic en "Confirmar y Enviar"</li>
+        </ol>
+
+        <h2>💾 Almacenamiento</h2>
+        <p>Los datos se almacenan localmente en tu navegador usando IndexedDB. Esto significa que:</p>
+        <ul>
+            <li>No necesitas conexión a internet</li>
+            <li>Los datos persisten entre sesiones</li>
+            <li>Puedes exportar/importar datos</li>
+            <li>Es completamente privado y seguro</li>
+        </ul>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="principal.html" class="demo-button">🏠 Volver al Panel Principal</a>
+        </div>
+    </div>
+
+    <script src="local-database.js"></script>
+    <script src="ocr-system.js"></script>
+    <script>
+        function probarOCR(accion) {
+            if (ocrSystem) {
+                ocrSystem.openOCR(accion);
+            } else {
+                alert('Sistema OCR no está disponible. Recarga la página.');
+            }
+        }
+
+        // Mostrar información de estado
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Página de ejemplo cargada');
+            console.log('Sistema OCR disponible:', !!ocrSystem);
+            console.log('Base de datos local disponible:', !!localDB);
+        });
+    </script>
+</body>
+</html> 

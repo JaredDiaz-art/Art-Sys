@@ -1,0 +1,273 @@
+<!-- principal.html - Panel de Control orientado a objetos -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artsys - Panel de Control</title>
+    <link rel="stylesheet" href="principal.css">
+    <link rel="stylesheet" href="ocr-styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!--
+        Estructura basada en entidades: Producto, Bodega, Carrito, Transaccion.
+        Cada sección del main corresponde a una entidad o proceso del dominio.
+    -->
+</head>
+<body>
+    <!-- Encabezado principal -->
+    <header class="artisanal-header">
+        <div class="header-content">
+            <h1 class="artisanal-logo">ArtSys</h1>
+            <p class="artisanal-tagline">Gestión de Artesanías</p>
+        </div>
+        <button id="logoutButton" class="logout-button artisanal-button">Cerrar Sesión</button>
+    </header>
+
+    <div class="main-container">
+        <!-- Barra lateral de navegación -->
+        <aside class="sidebar">
+            <nav>
+                <p>Mi Panel de Control</p>
+                <!-- Botones de navegación por entidad/proceso -->
+                <button id="btnMisProductos" class="nav-button active" data-section="misProductos">
+                    <img src="assets/images/icon-products.png" alt="Mis Productos">
+                    <span>Mis Productos</span>
+                </button>
+                <button id="btnEntradas" class="nav-button" data-section="entradas">
+                    <img src="assets/images/icon-entries.png" alt="Entradas">
+                    <span>Entradas</span>
+                </button>
+                <button id="btnSalidas" class="nav-button" data-section="salidas">
+                    <img src="assets/images/icon-exits.png" alt="Salidas">
+                    <span>Salidas</span>
+                </button>
+                <button id="btnBajas" class="nav-button" data-section="bajas">
+                    <img src="assets/images/icon-lows.png" alt="Bajas">
+                    <span>Bajas</span>
+                </button>
+                <button id="btnFinanzas" class="nav-button" data-section="finanzas">
+                    <img src="assets/images/icon-finances.png" alt="Finanzas">
+                    <span>Finanzas</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Área principal de contenido -->
+        <main class="content-area">
+            <!-- Sección de productos (clase Producto) -->
+            <section id="misProductos" class="content-section active">
+                <h2>Mis Productos</h2>
+                <!-- Filtros y creación de bodegas -->
+                <div class="section-header">
+                    <div class="input-group-inline">
+                        <label for="warehouseSelect">Bodega:</label>
+                        <select id="warehouseSelect"></select>
+                        <button id="createWarehouseBtn">Crear Bodega</button>
+                    </div>
+                </div>
+
+                <!-- Modal para crear bodega -->
+                <div id="createWarehouseModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-button">&times;</span>
+                        <h3>Crear Bodega</h3>
+                        <form id="createWarehouseForm">
+                            <label for="newWarehouseName">Nombre de la Bodega:</label>
+                            <input type="text" id="newWarehouseName" required>
+                            <button type="submit">Guardar Bodega</button>
+                            <p id="warehouseMessage" class="message"></p>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Filtro de productos -->
+                <div class="product-filters">
+                    <input type="text" id="productSearch" placeholder="Buscar producto por nombre...">
+                </div>
+
+                <!-- Tabla de productos -->
+                <h3>Lista de Productos</h3>
+                <div class="table-container">
+                    <table id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Stock</th>
+                                <th>Precio Venta</th>
+                                <th>Tamaño</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="4">No hay productos registrados aún.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modal de detalles de producto -->
+                <div id="productDetailModal" class="modal">
+                    <div class="modal-content">
+                        <span class="close-button">&times;</span>
+                        <div class="modal-header-with-img">
+                            <h3>Detalles del Producto</h3>
+                            <button id="deleteProductBtn" class="action-button delete-button">Eliminar</button>
+                            <button id="editProductBtn" class="action-button edit-button">Editar</button>
+                        </div>
+                        <div id="productDetailsContent"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección de entradas (registro de productos) -->
+            <section id="entradas" class="content-section">
+                <h2>Entradas</h2>
+                <button id="ocrButtonEntradas" class="ocr-button">OCR</button>
+                <form id="entryForm">
+                    <div class="input-group">
+                        <label for="entryProductName">Nombre:</label>
+                        <input type="text" id="entryProductName" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="entryStock">Stock:</label>
+                        <input type="number" id="entryStock" min="1" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="entryEntryPrice">Precio de Entrada:</label>
+                        <input type="number" id="entryEntryPrice" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="entrySalePrice">Precio de Venta:</label>
+                        <input type="number" id="entrySalePrice" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="entrySize">Tamaño:</label>
+                        <input type="text" id="entrySize" placeholder="Ej. 2 litros, 1 onza" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="entryWarehouseSelect">Bodega:</label>
+                        <select id="entryWarehouseSelect" required></select>
+                    </div>
+                    <button type="submit">Registrar Entrada</button>
+                    <p id="entryMessage" class="message"></p>
+                </form>
+            </section>
+
+            <!-- Sección de salidas (clase Carrito) -->
+            <section id="salidas" class="content-section">
+                <h2>Salidas</h2>
+                <button id="ocrButtonSalidas" class="ocr-button">OCR</button>
+                <div class="section-header">
+                    <label for="saleWarehouseSelect">Escoge la bodega:</label>
+                    <select id="saleWarehouseSelect"></select>
+                </div>
+                <div class="product-search-sale">
+                    <label for="saleProductSearch">Buscar producto:</label>
+                    <input type="text" id="saleProductSearch" placeholder="Nombre del producto">
+                </div>
+                <div id="saleSearchResults" class="search-results-dropdown"></div>
+
+                <div class="quantity-input-group">
+                    <label for="saleQuantity">Cantidad:</label>
+                    <input type="number" id="saleQuantity" min="1" value="1">
+                    <button id="addToCartBtn">Agregar al Carrito</button>
+                </div>
+
+                <!-- Tabla del carrito -->
+                <h3>Carrito de Salida</h3>
+                <div class="cart-container">
+                    <table id="cartTable">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Precio Venta</th>
+                                <th>Cantidad</th>
+                                <th>Tamaño</th>
+                                <th>Subtotal</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4">Total:</td>
+                                <td id="cartTotal">0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button id="completeSaleBtn" class="action-button">Realizar Salida</button>
+                <p id="saleMessage" class="message"></p>
+            </section>
+
+            <!-- Sección de bajas (registro de bajas de productos) -->
+            <section id="bajas" class="content-section">
+                <h2>Bajas</h2>
+                <button id="ocrButtonBajas" class="ocr-button">OCR</button>
+                <div class="section-header">
+                    <label for="lowWarehouseSelect">Escoge la bodega:</label>
+                    <select id="lowWarehouseSelect"></select>
+                </div>
+                <div class="product-search-low">
+                    <label for="lowProductSearch">Buscar producto:</label>
+                    <input type="text" id="lowProductSearch" placeholder="Nombre del producto">
+                </div>
+                <div id="lowSearchResults" class="search-results-dropdown"></div>
+
+                <div class="quantity-input-group">
+                    <label for="lowQuantity">Cantidad a dar de baja:</label>
+                    <input type="number" id="lowQuantity" min="1" value="1">
+                </div>
+                <button id="completeLowBtn" class="action-button">Dar de Baja Producto</button>
+                <p id="lowMessage" class="message"></p>
+            </section>
+
+            <!-- Sección de finanzas (clase Transaccion) -->
+            <section id="finanzas" class="content-section">
+                <h2>Finanzas Mensuales</h2>
+                <div class="finance-filters">
+                    <div class="input-group-inline">
+                        <label for="financeMonthSelect">Mes:</label>
+                        <input type="month" id="financeMonthSelect">
+                    </div>
+                    <div class="input-group-inline">
+                        <label for="financeStartDate">Desde:</label>
+                        <input type="date" id="financeStartDate">
+                    </div>
+                    <div class="input-group-inline">
+                        <label for="financeEndDate">Hasta:</label>
+                        <input type="date" id="financeEndDate">
+                    </div>
+                    <button id="filterFinancesBtn">Filtrar</button>
+                </div>
+
+                <!-- Tabla de transacciones -->
+                <h3>Transacciones Registradas</h3>
+                <div class="table-container">
+                    <table id="transactionsTable">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo de Transacción</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio Unitario</th>
+                                <th>Monto Total</th>
+                                <th>Usuario</th>
+                                <th>Bodega</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="8">No hay transacciones registradas para el período seleccionado.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p id="financeMessage" class="message"></p>
+            </section>
+        </main>
+    </div>
+
+    <script src="principal.js"></script>
+    <script src="local-database.js"></script>
+    <script src="ocr-system.js"></script>
+</body>
+</html> 
