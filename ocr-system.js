@@ -251,38 +251,61 @@ class OCRSystem {
         this.displayResults();
     }
 
-    // IA: Buscar estructura cantidad nombre capacidad tipoCapacidad $precio
+    // IA: Nueva lógica para extraer los campos según la estructura solicitada
     processWithAI(rawText) {
         const lines = rawText.trim().split('\n').filter(line => line.trim());
         const products = [];
-        // Regex: cantidad nombre capacidad tipoCapacidad $precio
-        // Ejemplo: 2 Jabón de manos 500 ml $35
-        const regex = /^(\d+)\s+([\wÁÉÍÓÚáéíóúüÜñÑ\s]+?)\s+(\d+[\/.\d]*)\s*([a-zA-ZáéíóúüñÑ]+)\s*\$\s*(\d+)/;
         lines.forEach(line => {
-            const match = line.match(regex);
-            if (match) {
+            // Solo procesar si la línea inicia con un número
+            const cantidadMatch = line.match(/^(\d+)/);
+            if (!cantidadMatch) return;
+            let cantidad = parseInt(cantidadMatch[1]);
+            let rest = line.replace(/^(\d+)\s+/, '');
+
+            // Buscar la capacidad (número entero, flotante o fracción)
+            // Buscar el primer número (entero, flotante o fracción) después de la cantidad
+            const capacidadMatch = rest.match(/([\d]+[\/.\d]*)/);
+            if (!capacidadMatch) {
+                // Si no hay capacidad, fallback: nombre es todo, los demás vacíos
                 products.push({
-                    cantidad: parseInt(match[1]),
-                    nombre: match[2].trim(),
-                    capacidad: match[3],
-                    tipoCapacidad: match[4],
-                    precio: parseInt(match[5]),
+                    cantidad,
+                    nombre: rest.trim(),
+                    capacidad: '',
+                    tipoCapacidad: '',
+                    precio: '',
                     original: line.trim()
                 });
-            } else {
-                // Si no coincide, intentar extraer lo más posible
-                const fallback = line.match(/(\d+)\s+([\wÁÉÍÓÚáéíóúüÜñÑ\s]+?)\s+(\d+[\/.\d]*)?\s*([a-zA-ZáéíóúüñÑ]+)?\s*\$?\s*(\d+)?/);
-                if (fallback) {
-                    products.push({
-                        cantidad: parseInt(fallback[1]) || '',
-                        nombre: fallback[2] ? fallback[2].trim() : '',
-                        capacidad: fallback[3] || '',
-                        tipoCapacidad: fallback[4] || '',
-                        precio: fallback[5] ? parseInt(fallback[5]) : '',
-                        original: line.trim()
-                    });
-                }
+                return;
             }
+            let capacidad = capacidadMatch[1];
+            // Nombre: todo lo que está antes de la capacidad
+            let nombre = rest.split(capacidad)[0].trim();
+            // El resto después de la capacidad
+            let afterCapacidad = rest.substring(rest.indexOf(capacidad) + capacidad.length).trim();
+
+            // Tipo de capacidad: la primera palabra después de la capacidad
+            const tipoCapMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ]+)/);
+            let tipoCapacidad = tipoCapMatch ? tipoCapMatch[1] : '';
+
+            // Buscar precio: número al final, después de un signo de pesos (puede haber espacios)
+            let precio = '';
+            const precioMatch = line.match(/\$\s*(\d+[\/.\d]*)\s*$/);
+            if (precioMatch) {
+                precio = precioMatch[1];
+            } else {
+                // Si no hay signo de pesos, buscar el último número al final
+                const precioAltMatch = afterCapacidad.match(/(\d+[\/.\d]*)\s*$/);
+                if (precioAltMatch) precio = precioAltMatch[1];
+            }
+
+            products.push({
+                cantidad,
+                nombre,
+                capacidad,
+                tipoCapacidad,
+                precio,
+                original: line.trim()
+            });
         });
         return products;
     }
