@@ -251,103 +251,14 @@ class OCRSystem {
         this.displayResults();
     }
 
-    // IA: Lógica mejorada y más robusta para extraer campos según la estructura exacta
+    // Lógica robusta usando la clase Producto
     processWithAI(rawText) {
         const lines = rawText.trim().split('\n').filter(line => line.trim());
         const products = [];
-        
-        lines.forEach((line, index) => {
-            console.log(`Procesando línea ${index + 1}: "${line}"`);
-            
-            // Solo procesar si la línea inicia con un número entero
-            const cantidadMatch = line.match(/^(\d+)/);
-            if (!cantidadMatch) {
-                console.log(`Línea ${index + 1} no inicia con número, saltando`);
-                return;
-            }
-            
-            let cantidad = parseInt(cantidadMatch[1]);
-            let rest = line.replace(/^(\d+)\s+/, '');
-            
-            console.log(`Cantidad detectada: ${cantidad}, resto: "${rest}"`);
-            
-            // Buscar la capacidad (número entero, flotante o fracción)
-            // Patrón más robusto para detectar números
-            const capacidadMatch = rest.match(/(\d+(?:[\/.]\d+)?)/);
-            if (!capacidadMatch) {
-                console.log(`No se detectó capacidad en línea ${index + 1}`);
-                // Fallback: nombre es todo el resto
-                products.push({
-                    cantidad,
-                    nombre: rest.trim(),
-                    capacidad: '',
-                    tipoCapacidad: '',
-                    precio: 0,
-                    original: line.trim()
-                });
-                return;
-            }
-            
-            let capacidad = capacidadMatch[1];
-            let nombre = rest.substring(0, rest.indexOf(capacidad)).trim();
-            let afterCapacidad = rest.substring(rest.indexOf(capacidad) + capacidad.length).trim();
-            
-            console.log(`Capacidad detectada: ${capacidad}, nombre: "${nombre}", después: "${afterCapacidad}"`);
-            
-            // Tipo de capacidad: palabra después de la capacidad y antes de $
-            let tipoCapacidad = '';
-            const tipoCapMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ]+)/);
-            if (tipoCapMatch) {
-                tipoCapacidad = tipoCapMatch[1];
-                afterCapacidad = afterCapacidad.substring(tipoCapacidad.length).trim();
-            }
-            
-            console.log(`Tipo de capacidad: "${tipoCapacidad}", resto: "${afterCapacidad}"`);
-            
-            // Precio: número después de $
-            let precio = 0;
-            const precioMatch = afterCapacidad.match(/\$\s*(\d+(?:[\/.]\d+)?)/);
-            if (precioMatch) {
-                precio = parseFloat(precioMatch[1]);
-            } else {
-                // Buscar el último número al final como precio alternativo
-                const precioAltMatch = afterCapacidad.match(/(\d+(?:[\/.]\d+)?)\s*$/);
-                if (precioAltMatch) {
-                    precio = parseFloat(precioAltMatch[1]);
-                }
-            }
-            
-            console.log(`Precio detectado: ${precio}`);
-            
-            // Validar que el nombre no esté vacío
-            if (!nombre) {
-                console.log(`Nombre vacío en línea ${index + 1}, intentando extraer del resto`);
-                // Intentar extraer nombre del resto si está vacío
-                const nombreAltMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ\s]+?)(?=\d|$)/);
-                if (nombreAltMatch) {
-                    nombre = nombreAltMatch[1].trim();
-                }
-            }
-            
-            products.push({
-                cantidad,
-                nombre: nombre || 'Producto sin nombre',
-                capacidad,
-                tipoCapacidad,
-                precio,
-                original: line.trim()
-            });
-            
-            console.log(`Producto procesado:`, {
-                cantidad,
-                nombre,
-                capacidad,
-                tipoCapacidad,
-                precio
-            });
-        });
-        
-        console.log(`Total de productos detectados: ${products.length}`);
+        for (const line of lines) {
+            const producto = Producto.fromLine(line);
+            if (producto) products.push(producto);
+        }
         return products;
     }
 
@@ -456,6 +367,49 @@ class OCRSystem {
     getCurrentBodega() {
         const bodegaSelect = document.querySelector('select[id*="warehouse"]');
         return bodegaSelect ? bodegaSelect.value : 'General';
+    }
+}
+
+// Clase Producto para estructurar y validar productos
+class Producto {
+    constructor(cantidad, nombre, capacidad, tipoCapacidad, precio, original) {
+        this.cantidad = cantidad;
+        this.nombre = nombre;
+        this.capacidad = capacidad;
+        this.tipoCapacidad = tipoCapacidad;
+        this.precio = precio;
+        this.original = original;
+    }
+
+    // Método estático para analizar una línea y devolver un Producto válido o null
+    static fromLine(line) {
+        // Solo procesar si la línea inicia con un número entero
+        const cantidadMatch = line.match(/^\s*(\d+)\s+/);
+        if (!cantidadMatch) return null;
+        const cantidad = parseInt(cantidadMatch[1]);
+        let rest = line.replace(/^\s*\d+\s+/, '');
+
+        // Buscar la capacidad (número entero, decimal o fracción)
+        // Permite espacios irregulares y errores menores
+        // Busca el primer número después del nombre
+        const capacidadMatch = rest.match(/([\d]+(?:[\/.]\d+)?)/);
+        if (!capacidadMatch) return null;
+        const capacidad = capacidadMatch[1];
+        // Nombre: todo lo que está antes de la capacidad
+        const nombre = rest.substring(0, rest.indexOf(capacidad)).replace(/\s+/g, ' ').trim();
+        if (!nombre) return null;
+        // El resto después de la capacidad
+        let afterCapacidad = rest.substring(rest.indexOf(capacidad) + capacidad.length).trim();
+        // Tipo de capacidad: la primera palabra después de la capacidad y antes de $
+        const tipoCapMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ]+)/);
+        const tipoCapacidad = tipoCapMatch ? tipoCapMatch[1] : '';
+        // Precio: número después de $
+        let precio = 0;
+        const precioMatch = afterCapacidad.match(/\$\s*(\d+)/);
+        if (precioMatch) {
+            precio = parseInt(precioMatch[1]);
+        }
+        return new Producto(cantidad, nombre, capacidad, tipoCapacidad, precio, line.trim());
     }
 }
 
