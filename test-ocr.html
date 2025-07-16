@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba OCR - ArtSys</title>
+    <link rel="stylesheet" href="principal.css">
+    <link rel="stylesheet" href="ocr-styles.css">
+    <style>
+        .test-container {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+        .test-input {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid var(--artisanal-accent);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .test-button {
+            background: var(--artisanal-primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: var(--artisanal-dark);
+        }
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .result-table th {
+            background: var(--artisanal-primary);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .result-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .example-text {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Prueba de Lógica OCR</h1>
+        <p>Esta página te permite probar la lógica de interpretación OCR sin necesidad de usar la cámara.</p>
+
+        <div class="test-section">
+            <h3>📝 Ejemplos de Texto</h3>
+            <p>Prueba con estos formatos:</p>
+            
+            <div class="example-text">
+                <strong>Formato 1 (Recomendado):</strong><br>
+                2 Jabón de manos 500 ml $35<br>
+                1 Detergente líquido 1.5 L $52<br>
+                3 Papel higiénico 4 rollos 12 m $28<br>
+                1 Limpiador multiusos 750 ml $41
+            </div>
+
+            <div class="example-text">
+                <strong>Formato 2 (Sin signo de pesos):</strong><br>
+                5 Leche 1 L 25<br>
+                2 Pan integral 1 kg 18<br>
+                3 Manzanas 2 kg 30
+            </div>
+
+            <div class="example-text">
+                <strong>Formato 3 (Con fracciones):</strong><br>
+                1 Aceite de oliva 250 ml $45<br>
+                2 Harina 1/2 kg $12<br>
+                4 Huevos 1 docena $24
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 Probar Lógica OCR</h3>
+            <p>Ingresa el texto que quieres procesar:</p>
+            
+            <textarea id="testInput" class="test-input" placeholder="Pega aquí el texto a procesar...">2 Jabón de manos 500 ml $35
+1 Detergente líquido 1.5 L $52
+3 Papel higiénico 4 rollos 12 m $28
+1 Limpiador multiusos 750 ml $41</textarea>
+            
+            <div>
+                <button class="test-button" onclick="testOCR()">🔍 Procesar Texto</button>
+                <button class="test-button" onclick="clearResults()">🗑️ Limpiar</button>
+                <button class="test-button" onclick="loadExample(1)">📋 Ejemplo 1</button>
+                <button class="test-button" onclick="loadExample(2)">📋 Ejemplo 2</button>
+                <button class="test-button" onclick="loadExample(3)">📋 Ejemplo 3</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Resultados</h3>
+            <div id="resultsContainer" style="display: none;">
+                <h4>Productos Detectados:</h4>
+                <table id="resultsTable" class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Cantidad</th>
+                            <th>Nombre</th>
+                            <th>Capacidad</th>
+                            <th>Tipo Capacidad</th>
+                            <th>Precio</th>
+                            <th>Original</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 Estadísticas</h3>
+            <div id="statsContainer" style="display: none;">
+                <p><strong>Total de productos detectados:</strong> <span id="totalProducts">0</span></p>
+                <p><strong>Productos con precio:</strong> <span id="productsWithPrice">0</span></p>
+                <p><strong>Productos con capacidad:</strong> <span id="productsWithCapacity">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Función para procesar texto OCR (simulando la lógica del sistema)
+        function processWithAI(rawText) {
+            const lines = rawText.trim().split('\n').filter(line => line.trim());
+            const products = [];
+            
+            lines.forEach((line, index) => {
+                console.log(`Procesando línea ${index + 1}: "${line}"`);
+                
+                // Solo procesar si la línea inicia con un número entero
+                const cantidadMatch = line.match(/^(\d+)/);
+                if (!cantidadMatch) {
+                    console.log(`Línea ${index + 1} no inicia con número, saltando`);
+                    return;
+                }
+                
+                let cantidad = parseInt(cantidadMatch[1]);
+                let rest = line.replace(/^(\d+)\s+/, '');
+                
+                console.log(`Cantidad detectada: ${cantidad}, resto: "${rest}"`);
+                
+                // Buscar la capacidad (número entero, flotante o fracción)
+                const capacidadMatch = rest.match(/(\d+(?:[\/.]\d+)?)/);
+                if (!capacidadMatch) {
+                    console.log(`No se detectó capacidad en línea ${index + 1}`);
+                    products.push({
+                        cantidad,
+                        nombre: rest.trim(),
+                        capacidad: '',
+                        tipoCapacidad: '',
+                        precio: 0,
+                        original: line.trim()
+                    });
+                    return;
+                }
+                
+                let capacidad = capacidadMatch[1];
+                let nombre = rest.substring(0, rest.indexOf(capacidad)).trim();
+                let afterCapacidad = rest.substring(rest.indexOf(capacidad) + capacidad.length).trim();
+                
+                console.log(`Capacidad detectada: ${capacidad}, nombre: "${nombre}", después: "${afterCapacidad}"`);
+                
+                // Tipo de capacidad: palabra después de la capacidad y antes de $
+                let tipoCapacidad = '';
+                const tipoCapMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ]+)/);
+                if (tipoCapMatch) {
+                    tipoCapacidad = tipoCapMatch[1];
+                    afterCapacidad = afterCapacidad.substring(tipoCapacidad.length).trim();
+                }
+                
+                console.log(`Tipo de capacidad: "${tipoCapacidad}", resto: "${afterCapacidad}"`);
+                
+                // Precio: número después de $
+                let precio = 0;
+                const precioMatch = afterCapacidad.match(/\$\s*(\d+(?:[\/.]\d+)?)/);
+                if (precioMatch) {
+                    precio = parseFloat(precioMatch[1]);
+                } else {
+                    // Buscar el último número al final como precio alternativo
+                    const precioAltMatch = afterCapacidad.match(/(\d+(?:[\/.]\d+)?)\s*$/);
+                    if (precioAltMatch) {
+                        precio = parseFloat(precioAltMatch[1]);
+                    }
+                }
+                
+                console.log(`Precio detectado: ${precio}`);
+                
+                // Validar que el nombre no esté vacío
+                if (!nombre) {
+                    console.log(`Nombre vacío en línea ${index + 1}, intentando extraer del resto`);
+                    const nombreAltMatch = afterCapacidad.match(/^([a-zA-ZáéíóúüñÑ\s]+?)(?=\d|$)/);
+                    if (nombreAltMatch) {
+                        nombre = nombreAltMatch[1].trim();
+                    }
+                }
+                
+                products.push({
+                    cantidad,
+                    nombre: nombre || 'Producto sin nombre',
+                    capacidad,
+                    tipoCapacidad,
+                    precio,
+                    original: line.trim()
+                });
+                
+                console.log(`Producto procesado:`, {
+                    cantidad,
+                    nombre,
+                    capacidad,
+                    tipoCapacidad,
+                    precio
+                });
+            });
+            
+            console.log(`Total de productos detectados: ${products.length}`);
+            return products;
+        }
+
+        function testOCR() {
+            const input = document.getElementById('testInput').value;
+            const products = processWithAI(input);
+            
+            displayResults(products);
+            displayStats(products);
+        }
+
+        function displayResults(products) {
+            const tbody = document.querySelector('#resultsTable tbody');
+            tbody.innerHTML = '';
+            
+            products.forEach(product => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${product.cantidad}</td>
+                    <td>${product.nombre}</td>
+                    <td>${product.capacidad}</td>
+                    <td>${product.tipoCapacidad}</td>
+                    <td>${product.precio}</td>
+                    <td style="font-size: 11px; color: #666;">${product.original}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('resultsContainer').style.display = 'block';
+        }
+
+        function displayStats(products) {
+            const totalProducts = products.length;
+            const productsWithPrice = products.filter(p => p.precio > 0).length;
+            const productsWithCapacity = products.filter(p => p.capacidad).length;
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('productsWithPrice').textContent = productsWithPrice;
+            document.getElementById('productsWithCapacity').textContent = productsWithCapacity;
+            
+            document.getElementById('statsContainer').style.display = 'block';
+        }
+
+        function clearResults() {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('statsContainer').style.display = 'none';
+            document.getElementById('testInput').value = '';
+        }
+
+        function loadExample(num) {
+            const examples = {
+                1: `2 Jabón de manos 500 ml $35
+1 Detergente líquido 1.5 L $52
+3 Papel higiénico 4 rollos 12 m $28
+1 Limpiador multiusos 750 ml $41`,
+                2: `5 Leche 1 L 25
+2 Pan integral 1 kg 18
+3 Manzanas 2 kg 30`,
+                3: `1 Aceite de oliva 250 ml $45
+2 Harina 1/2 kg $12
+4 Huevos 1 docena $24`
+            };
+            
+            document.getElementById('testInput').value = examples[num] || '';
+        }
+
+        // Cargar ejemplo por defecto
+        window.onload = function() {
+            loadExample(1);
+        };
+    </script>
+</body>
+</html> 
