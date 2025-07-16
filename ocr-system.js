@@ -20,8 +20,8 @@ function preprocessImage(imageDataUrl, callback) {
     img.src = imageDataUrl;
 }
 
-// Clase Producto y parser tolerante
-class Producto {
+// Clase ProductoOCR y parser tolerante
+class ProductoOCR {
     constructor(cantidad, nombre, capacidad, tipo, precio, original) {
         this.cantidad = cantidad;
         this.nombre = nombre;
@@ -40,39 +40,39 @@ class ProductoParser {
             .replace(/l/g, '1')
             .replace(/rn/g, 'm')
             .replace(/O/g, '0')
-            .replace(/[^\\w\\d\\s\\/$\\.]/g, '') // Elimina caracteres raros
-            .replace(/\\s{2,}/g, ' ')
+            .replace(/[^\w\d\s\/$\.]/g, '') // Elimina caracteres raros
+            .replace(/\s{2,}/g, ' ')
             .trim();
     }
 
     static parseLine(line) {
         line = this.normalizar(line);
         // Solo si inicia con número
-        const cantidadMatch = line.match(/^\\s*(\\d+)\\s+/);
+        const cantidadMatch = line.match(/^\s*(\d+)\s+/);
         if (!cantidadMatch) return null;
         const cantidad = parseInt(cantidadMatch[1]);
-        let rest = line.replace(/^\\s*\\d+\\s+/, '');
+        let rest = line.replace(/^\s*\d+\s+/, '');
 
         // Buscar todos los números (capacidad, precio, etc.)
-        const numeros = [...rest.matchAll(/(\\d+[\\/.]?\\d*)/g)].map(m => m[1]);
+        const numeros = [...rest.matchAll(/(\d+[\/.]?\d*)/g)].map(m => m[1]);
         if (numeros.length < 1) return null;
         const capacidad = numeros[0];
         // Nombre: todo antes de la capacidad
-        const nombre = rest.substring(0, rest.indexOf(capacidad)).replace(/\\s+/g, ' ').trim();
+        const nombre = rest.substring(0, rest.indexOf(capacidad)).replace(/\s+/g, ' ').trim();
         // Tipo: palabra después de capacidad
         let afterCap = rest.substring(rest.indexOf(capacidad) + capacidad.length).trim();
         const tipoMatch = afterCap.match(/^([a-zA-ZáéíóúüñÑ]+)/);
         const tipo = tipoMatch ? tipoMatch[1] : '';
         // Precio: después de $ o último número
         let precio = 0;
-        const precioMatch = afterCap.match(/\\$\\s*(\\d+)/);
+        const precioMatch = afterCap.match(/\$\s*(\d+)/);
         if (precioMatch) precio = parseInt(precioMatch[1]);
         else if (numeros.length > 1) precio = parseInt(numeros[numeros.length - 1]);
-        return new Producto(cantidad, nombre, capacidad, tipo, precio, line.trim());
+        return new ProductoOCR(cantidad, nombre, capacidad, tipo, precio, line.trim());
     }
 
     static parseText(text) {
-        return text.split('\\n').map(l => this.parseLine(l)).filter(Boolean);
+        return text.split('\n').map(l => this.parseLine(l)).filter(Boolean);
     }
 }
 
@@ -308,9 +308,19 @@ class OCRSystem {
     }
 }
 
-// Inicializar sistema OCR
 let ocrSystem;
 document.addEventListener('DOMContentLoaded', () => {
     ocrSystem = new OCRSystem();
-    // Puedes abrir el modal con ocrSystem.openOCR();
+    window.ocrSystem = ocrSystem;
+    // Asignar listeners a los botones OCR
+    const btns = [
+        document.getElementById('ocrButtonEntradas'),
+        document.getElementById('ocrButtonSalidas'),
+        document.getElementById('ocrButtonBajas')
+    ];
+    btns.forEach(btn => {
+        if (btn) {
+            btn.addEventListener('click', () => ocrSystem.openOCR());
+        }
+    });
 }); 
