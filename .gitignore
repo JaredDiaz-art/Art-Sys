@@ -1,0 +1,6 @@
+# Ignora archivos de configuración sensibles
+.env
+ocr-config.js
+uploads/
+node_modules/
+.DS_Store 
